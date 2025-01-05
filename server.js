@@ -11,7 +11,7 @@ const PORT = 3001;
 const corsOptions = {
   origin: function (origin, callback) {
     const allowedOrigins = [
-      "https://wedfrontend-bke40csab-pierof9s-projects.vercel.app/", // Replace with your actual Vercel URL
+      "https://wedfrontend-gufez5zur-pierof9s-projects.vercel.app", // Replace with your actual Vercel URL
       "http://localhost:5173", // Allow localhost for local testing
     ];
 
