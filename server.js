@@ -1,4 +1,5 @@
 const express = require("express");
+const cors = require('cors'); // Install: npm install cors
 const fs = require("fs");
 const bodyParser = require("body-parser");
 const path = require("path");
@@ -6,29 +7,26 @@ const path = require("path");
 const app = express();
 const PORT = 3001;
 
-// Middleware for CORS - Handle preflight requests
-app.use((req, res, next) => {
-  const allowedOrigins = [
-    "https://wedfrontend-bke40csab-pierof9s-projects.vercel.app/", // Replace with your actual Vercel URL
-    "http://localhost:5173", // Allow localhost for local testing
-  ];
+// CORS configuration
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      "https://wedfrontend-bke40csab-pierof9s-projects.vercel.app/", // Replace with your actual Vercel URL
+      "http://localhost:5173", // Allow localhost for local testing
+    ];
 
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin); // Allow the requesting origin
-  }
-
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS"); // Allow GET, POST, and OPTIONS methods
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type"); // Allow Content-Type header
-  res.setHeader("Access-Control-Allow-Credentials", "true"); // Optional, if you need credentials (like cookies)
-
-  // If it's a preflight OPTIONS request, respond with 200 status and allow the method
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-
-  next();
-});
+    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+      // Allow the origin if it's in the allowed list or if it's a local request (e.g., Postman or CURL)
+      callback(null, true);
+    } else {
+      // Reject requests from unknown origins
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  methods: ["GET", "POST", "OPTIONS"], // Allow GET, POST, and OPTIONS methods
+  allowedHeaders: ["Content-Type"], // Allow Content-Type header
+  credentials: true, // Allow credentials (cookies, HTTP authentication)
+};
 
 // Middleware for parsing JSON request bodies
 app.use(bodyParser.json());
