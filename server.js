@@ -6,14 +6,32 @@ const path = require("path");
 const app = express();
 const PORT = 3001;
 
-// Middleware
-app.use(bodyParser.json());
+// Middleware for CORS - Handle preflight requests
 app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  const allowedOrigins = [
+    "https://wedfrontend-bke40csab-pierof9s-projects.vercel.app/", // Replace with your actual Vercel URL
+    "http://localhost:5173", // Allow localhost for local testing
+  ];
+
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin); // Allow the requesting origin
+  }
+
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS"); // Allow GET, POST, and OPTIONS methods
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type"); // Allow Content-Type header
+  res.setHeader("Access-Control-Allow-Credentials", "true"); // Optional, if you need credentials (like cookies)
+
+  // If it's a preflight OPTIONS request, respond with 200 status and allow the method
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   next();
 });
+
+// Middleware for parsing JSON request bodies
+app.use(bodyParser.json());
 
 // Define the file path to store data
 const filePath = path.join(__dirname, "./assets/replies.json");
