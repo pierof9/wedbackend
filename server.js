@@ -39,14 +39,14 @@ const filePath = path.join(__dirname, "./assets/replies.json");
 
 // Handle form submissions
 app.post("/submit", (req, res) => {
-  const { name, surname, email, isComing, bringingSomeone, plusOneName, needCar, hasNotes, notes } = req.body;
+  const { name, surname, email, isComing, address, bringingSomeone, plusOneName, needCar, hasNotes, notes } = req.body;
 
   if (!name || !surname || !email) {
     return res.status(400).json({ error: "Name, Surname, and Email are required." });
   }
 
   // Create a new reply entry
-  const newReply = { name, surname, email, isComing, bringingSomeone, plusOneName, needCar, hasNotes, notes };
+  const newReply = { name, surname, email, isComing, address, bringingSomeone, plusOneName, needCar, hasNotes, notes };
 
   // Read existing replies from the file
   fs.readFile(filePath, "utf8", (err, data) => {
@@ -64,6 +64,35 @@ app.post("/submit", (req, res) => {
       }
       res.status(200).json({ message: "Reply saved successfully!" });
     });
+  });
+});
+
+// Handle fetching all replies and computing totals
+app.get("/replies", (req, res) => {
+  // Read the replies.json file
+  fs.readFile(filePath, "utf8", (err, data) => {
+    if (err && err.code !== "ENOENT") {
+      return res.status(500).json({ error: "Failed to read data." });
+    }
+
+    // Parse the data or use an empty array if the file doesn't exist or is empty
+    const replies = data ? JSON.parse(data) : [];
+
+    // Count "isComing: yes" and "isComing: no"
+    const totals = replies.reduce(
+      (acc, reply) => {
+        if (reply.isComing === "yes") {
+          acc.yes++;
+        } else if (reply.isComing === "no") {
+          acc.no++;
+        }
+        return acc;
+      },
+      { yes: 0, no: 0 } // Initialize counters
+    );
+
+    // Respond with the replies and totals
+    res.status(200).json({ totals, replies });
   });
 });
 
