@@ -15,7 +15,7 @@ const corsOptions = {
     const allowedOrigins = [
       // "https://wedfrontend-gufez5zur-pierof9s-projects.vercel.app", // Replace with your actual Vercel URL
       "http://localhost:5173", // Allow localhost for local testing
-      "https://matrimoniopieroeclaudia.vercel.app/",
+      "https://matrimoniopieroeclaudia.vercel.app",
     ];
 
     if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
