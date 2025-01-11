@@ -1,8 +1,10 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require('cors'); // Install: npm install cors
 const fs = require("fs");
 const bodyParser = require("body-parser");
 const path = require("path");
+const postmark = require("postmark");
 
 const app = express();
 const PORT = 3001;
@@ -11,8 +13,9 @@ const PORT = 3001;
 const corsOptions = {
   origin: function (origin, callback) {
     const allowedOrigins = [
-      "https://wedfrontend-gufez5zur-pierof9s-projects.vercel.app", // Replace with your actual Vercel URL
+      // "https://wedfrontend-gufez5zur-pierof9s-projects.vercel.app", // Replace with your actual Vercel URL
       "http://localhost:5173", // Allow localhost for local testing
+      "https://matrimoniopieroeclaudia.vercel.app/",
     ];
 
     if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
@@ -36,6 +39,13 @@ app.use(bodyParser.json());
 
 // Define the file path to store data
 const filePath = path.join(__dirname, "./assets/replies.json");
+
+// Postmark setup
+const postmarkClient = new postmark.ServerClient(process.env.POSTMARK_API_KEY);
+
+// I'll use the same mail for simplicity
+const FROM_EMAIL = process.env.FROM_EMAIL;
+const TO_EMAIL = process.env.TO_EMAIL;
 
 // Handle form submissions
 app.post("/submit", (req, res) => {
@@ -62,7 +72,70 @@ app.post("/submit", (req, res) => {
       if (writeErr) {
         return res.status(500).json({ error: "Failed to save reply." });
       }
-      res.status(200).json({ message: "Reply saved successfully!" });
+
+      let MAIL_TEXT;
+      if (isComing === "yes") {
+        MAIL_TEXT = `
+        <h1>You have another confirmation.</h1> 
+        <p>${name} ${surname} will join the party!</p>
+        <p>Best Regards,</p>
+        `;
+      } else {
+        MAIL_TEXT = `
+        <h1>Ops! They will not join.</h1> 
+        <p>${name} ${surname} said he is not coming to the party.</p>
+        <p>Best Regards,</p>
+        `;
+      };
+
+      // Step 1: Send confirmation email to the guest
+      const confirmationEmail = {
+        From: FROM_EMAIL, // Your sender email
+        To: TO_EMAIL,
+        Subject: "RSVP Event Management",
+        TextBody: MAIL_TEXT.replace(/<[^>]*>/g, ""), // Plain text version (strips HTML tags)
+        HtmlBody: MAIL_TEXT,
+        MessageStream: "outbound",
+      };
+
+      postmarkClient.sendEmail(confirmationEmail)
+        .then(() => console.log("Confirmation email sent to guest."))
+        .catch((err) => console.error("Error sending confirmation email:", err));
+
+      // Step 2: Send summary email to yourself
+      let totalComing = 0;
+      let totalNotComing = 0;
+
+      // Count the number of attendees
+      replies.forEach((reply) => {
+        if (reply.isComing === "yes") {
+          totalComing++;
+        } else if (reply.isComing === "no") {
+          totalNotComing++;
+        }
+      });
+
+      const summaryEmail = {
+        From: FROM_EMAIL, // Your sender email
+        To: TO_EMAIL, // Your email address
+        Subject: "RSVP Summary Report",
+        TextBody: `Total RSVPs:\n- People attending: ${totalComing}\n- People not attending: ${totalNotComing}\n\nAttached is the full list of replies.`,
+        MessageStream: "outbound",
+        Attachments: [
+          {
+            Name: "replies.json", // File name
+            Content: fs.readFileSync(filePath).toString("base64"), // Base64-encoded file content
+            ContentType: "application/json",
+          },
+        ],
+      };
+
+      postmarkClient.sendEmail(summaryEmail)
+        .then(() => console.log("Summary email sent to admin."))
+        .catch((err) => console.error("Error sending summary email:", err));
+
+      // Respond to the client
+      res.status(200).json({ message: "Reply saved and emails sent successfully!" });
     });
   });
 });
